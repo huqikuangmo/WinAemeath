@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="img_left_bottom.png" />
+    <None Remove="img_right_bottom.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="img_left_bottom.png" />
+    <Resource Include="img_left_top.png" />
+    <Resource Include="img_right_bottom.png" />
+  </ItemGroup>
+
+</Project>
