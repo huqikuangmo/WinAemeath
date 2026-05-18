@@ -180,7 +180,10 @@ namespace WinAemeath
                 if (fg != IntPtr.Zero && fg != _lastForeground && fg != _myHwnd)
                 {
                     _lastForeground = fg;
-                    if (!IsSystemWindow(fg))
+                    _targetHwnd = IntPtr.Zero;
+                    if (IsSystemWindow(fg))
+                        Hide();                 
+                    else
                         OnForegroundChanged(fg);
                 }
             };
@@ -202,7 +205,9 @@ namespace WinAemeath
             switch (eventType)
             {
                 case EVENT_SYSTEM_FOREGROUND:
-                    if (!IsSystemWindow(hwnd))
+                    if (IsSystemWindow(hwnd))
+                        Dispatcher.BeginInvoke(() => { _targetHwnd = IntPtr.Zero; Hide(); }); // ← 加这行
+                    else
                         Dispatcher.BeginInvoke(() => OnForegroundChanged(hwnd));
                     break;
 
@@ -220,23 +225,56 @@ namespace WinAemeath
 
         // ── UI 线程处理 ──────────────────────────────────────────────
 
+        private DispatcherTimer _attachTimer;
+
         private void OnForegroundChanged(IntPtr hwnd)
         {
-            if (!IsWindow(hwnd)) { Hide(); return; }
+            // 立刻取消上一次重试，并隐藏
+            _attachTimer?.Stop();
+            Hide();
 
-            // 延迟 100ms 等待新窗口完成激活，再确认其有效性
-            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-            timer.Tick += (_, _) =>
+            if (!IsWindow(hwnd)) return;
+            TryAttach(hwnd, retries: 10, intervalMs: 150);
+        }
+
+        private void TryAttach(IntPtr hwnd, int retries, int intervalMs)
+        {
+            // 先同步检查一次，普通窗口切换直接命中，无延迟
+            if (IsWindow(hwnd) && IsWindowVisible(hwnd))
             {
-                timer.Stop();
-                if (!IsWindow(hwnd) || !IsWindowVisible(hwnd)) return;
+                if (!ShouldHide(hwnd))
+                {
+                    _targetHwnd = hwnd;
+                    UpdatePosition(_targetHwnd);
+                    Show();
+                    return;
+                }
+                else
+                {
+                    Hide();
+                    return;
+                }
+            }
+
+            // 窗口还没显示（新建场景），再走重试逻辑
+            if (retries <= 0) return;
+            _attachTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(intervalMs) };
+            _attachTimer.Tick += (_, _) =>
+            {
+                _attachTimer.Stop();
+                if (!IsWindow(hwnd)) return;
+                if (!IsWindowVisible(hwnd))
+                {
+                    TryAttach(hwnd, retries - 1, intervalMs);
+                    return;
+                }
                 if (ShouldHide(hwnd)) { Hide(); return; }
 
                 _targetHwnd = hwnd;
                 UpdatePosition(_targetHwnd);
                 Show();
             };
-            timer.Start();
+            _attachTimer.Start();
         }
 
         private void OnTargetMoved()
