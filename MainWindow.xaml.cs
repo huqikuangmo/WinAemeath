@@ -306,7 +306,7 @@ namespace WinAemeath
                 int h = r.Bottom - r.Top;
 
                 if (w < 100 || h < 100) return true;   // 过小
-                if (w < 400 && h < 400) return true;   // 弹出菜单/托盘菜单
+                if (w < 600 && h < 600) return true;   // 弹出菜单/托盘菜单
                 if (h / (double)w > 1.5 && w < 400) return true; // 高瘦型弹窗
             }
 
